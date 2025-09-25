@@ -1,0 +1,108 @@
+
+
+### 1. Qual a diferença entre programa e processo?
+* **Programa:** É um conjunto de instruções estático e passivo, armazenado em um arquivo no disco (por exemplo, um arquivo executável). Ele é apenas um "roteiro".
+* **Processo:** É uma instância de um programa em execução. É uma entidade dinâmica, ativa, que possui recursos alocados pelo sistema operacional, como memória, tempo de CPU e arquivos abertos. Vários processos podem ser instâncias do mesmo programa.
+
+### 2. Quais são os estados de um processo e quando ocorrem as transições?
+Os estados básicos de um processo são:
+* **Novo (New):** O processo está sendo criado.
+* **Pronto (Ready):** O processo está pronto para ser executado e aguarda para receber tempo de CPU do escalonador.
+* **Executando (Running):** O processo está atualmente utilizando a CPU para executar suas instruções.
+* **Bloqueado/Aguardando (Blocked/Waiting):** O processo não pode continuar a execução porque está esperando por algum evento, como uma operação de E/S (Entrada/Saída), um sinal ou a liberação de um recurso.
+* **Terminado (Terminated):** O processo concluiu sua execução ou foi finalizado pelo sistema operacional.
+
+**Transições:**
+* **Novo -> Pronto:** O sistema operacional admite o processo e aloca os recursos iniciais para ele.
+* **Pronto -> Executando:** O escalonador de processos escolhe o processo para usar a CPU.
+* **Executando -> Pronto:** O tempo de CPU alocado para o processo (quantum) expira, ou ele é interrompido por um processo de maior prioridade.
+* **Executando -> Bloqueado:** O processo solicita uma operação que não pode ser completada imediatamente (ex: leitura de um arquivo).
+* **Bloqueado -> Pronto:** O evento pelo qual o processo estava esperando ocorre (ex: a leitura do arquivo é concluída).
+* **Executando -> Terminado:** O processo finaliza sua execução normalmente ou é abortado por um erro ou por um comando externo.
+
+### 3. O que contém um Process Control Block (PCB)?
+O Bloco de Controle de Processo (PCB) é uma estrutura de dados mantida pelo sistema operacional para cada processo. Ele armazena todas as informações necessárias para gerenciar o processo, incluindo:
+* **ID do Processo (PID):** Um identificador único para o processo.
+* **Estado do Processo:** O estado atual (Pronto, Executando, Bloqueado, etc.).
+* **Contador de Programa (PC):** O endereço da próxima instrução a ser executada.
+* **Registradores da CPU:** Cópias dos valores dos registradores da CPU (acumuladores, registradores de índice, etc.).
+* **Informações de Escalonamento:** Prioridade do processo, ponteiros para filas de escalonamento.
+* **Informações de Gerenciamento de Memória:** Ponteiros para as tabelas de páginas ou segmentos de memória alocados ao processo.
+* **Informações de Contabilidade:** Tempo de CPU utilizado, limites de tempo, etc.
+* **Informações de E/S:** Lista de dispositivos de E/S e arquivos abertos pelo processo.
+
+### 4. O que acontece com os recursos de um processo quando ele termina?
+Quando um processo termina, o sistema operacional é responsável por liberar todos os recursos que foram alocados a ele para que possam ser utilizados por outros processos. Isso inclui:
+* Liberar a memória RAM (espaço de endereçamento).
+* Fechar todos os arquivos que estavam abertos.
+* Liberar conexões de rede e outros dispositivos de E/S.
+* Remover o PCB da lista de processos ativos.
+
+### 5. Qual a diferença entre `fork()` e `exec()` no UNIX?
+* `fork()`: É uma chamada de sistema que cria um novo processo, que é uma cópia quase idêntica do processo que a chamou (processo pai). O novo processo (processo filho) tem seu próprio espaço de endereçamento, mas herda cópias dos descritores de arquivo, variáveis de ambiente e outras propriedades do pai. O `fork()` retorna o PID do filho para o processo pai e 0 para o processo filho.
+* `exec()`: É uma família de chamadas de sistema que substitui o espaço de endereçamento do processo atual por um novo programa. Ou seja, ela carrega um novo programa para ser executado no contexto do processo existente. Se a chamada `exec()` for bem-sucedida, o código do programa original é completamente substituído e a execução nunca retorna ao ponto onde `exec()` foi chamada.
+
+Em resumo: `fork()` cria um novo processo (clone), enquanto `exec()` substitui o programa em execução no processo atual por um novo.
+
+### 6. Como funciona a hierarquia de processos em UNIX?
+Em sistemas UNIX-like, os processos são organizados em uma hierarquia de árvore. O primeiro processo, chamado `init` (ou `systemd` em sistemas mais modernos), tem PID 1 e é o ancestral de todos os outros processos do sistema. Cada vez que um processo cria um novo processo usando `fork()`, ele se torna o "pai" do novo processo "filho". Essa relação pai-filho cria a estrutura de árvore. Se um processo pai termina antes de seu filho, o processo filho se torna "órfão" e é adotado pelo processo `init`.
+
+### 7. Compare memória compartilhada e troca de mensagens (IPC).
+Tanto a memória compartilhada quanto a troca de mensagens são mecanismos de Comunicação Entre Processos (IPC - Inter-Process Communication).
+
+* **Memória Compartilhada:**
+    * **Como funciona:** O sistema operacional cria uma região de memória que é mapeada no espaço de endereçamento de dois ou mais processos cooperativos. Eles podem ler e escrever nessa área diretamente.
+    * **Velocidade:** É muito rápida, pois não há envolvimento do kernel após a configuração inicial da área compartilhada. Os dados são acessados na velocidade da memória.
+    * **Sincronização:** Os processos são responsáveis por sincronizar o acesso à memória compartilhada para evitar condições de corrida, geralmente usando semáforos ou mutexes.
+
+* **Troca de Mensagens:**
+    * **Como funciona:** Os processos se comunicam enviando mensagens (pacotes de dados) uns aos outros através de um canal de comunicação gerenciado pelo kernel do sistema operacional.
+    * **Velocidade:** É mais lenta que a memória compartilhada, pois cada comunicação envolve uma chamada de sistema (uma transição para o modo kernel), o que adiciona sobrecarga.
+    * **Sincronização:** É mais fácil de implementar e sincronizar, pois o kernel gerencia o envio e o recebimento de mensagens, evitando que os processos acessem dados simultaneamente de forma incorreta. É ideal para sistemas distribuídos.
+
+### 8. Cite exemplos de chamadas de sistema usadas em IPC.
+* **Troca de Mensagens:** `pipe()`, `socket()`, `send()`, `recv()`.
+* **Memória Compartilhada:** `shmget()` (para criar um segmento), `shmat()` (para anexar o segmento ao espaço de endereçamento), `shmdt()` (para desanexar).
+* **Sincronização:** `sem_init()`, `sem_wait()`, `sem_post()` (para semáforos).
+
+### 9. Por que é importante que o sistema operacional faça gerenciamento de processos?
+O gerenciamento de processos é uma das funções centrais de um sistema operacional, pois permite a multiprogramação e o compartilhamento justo e seguro dos recursos do sistema. Suas principais importâncias são:
+* **Compartilhamento de Recursos:** Gerencia como múltiplos processos compartilham a CPU, a memória e os dispositivos de E/S de forma eficiente e sem conflitos.
+* **Isolamento e Proteção:** Isola os processos uns dos outros, impedindo que um processo defeituoso ou malicioso interfira na execução de outros ou do próprio sistema operacional.
+* **Comunicação:** Fornece mecanismos para que processos possam se comunicar e sincronizar suas ações (IPC).
+* **Criação e Finalização:** Controla todo o ciclo de vida de um processo, desde sua criação até sua finalização e a liberação de seus recursos.
+
+### 10. Explique a diferença entre processos independentes e processos cooperativos.
+* **Processos Independentes:** São processos que não são afetados pela execução de outros processos e não compartilham dados com eles. A execução de um não tem impacto no resultado do outro.
+* **Processos Cooperativos:** São processos que podem afetar ou ser afetados por outros processos. Eles geralmente compartilham dados ou informações através de mecanismos de IPC para alcançar um objetivo comum. A cooperação permite o compartilhamento de informações, a aceleração computacional (dividindo tarefas) e a modularidade.
+
+### 11. O que é um processo zumbi em UNIX/Linux?
+Um processo zumbi é um processo que já terminou sua execução, mas cuja entrada ainda permanece na tabela de processos do sistema operacional. Isso ocorre porque seu processo pai ainda não leu seu status de término (através da chamada de sistema `wait()`). O processo zumbi não consome CPU, mas retém seu PID e uma pequena quantidade de memória no kernel. Se muitos processos zumbis se acumularem, eles podem esgotar o número de PIDs disponíveis no sistema.
+
+### 12. Explique a diferença entre chamadas bloqueantes e não bloqueantes em IPC.
+* **Chamadas Bloqueantes (Síncronas):** Uma chamada bloqueante suspende a execução do processo chamador até que a operação seja concluída. Por exemplo, um `recv()` bloqueante fará o processo esperar até que uma mensagem chegue.
+* **Chamadas Não Bloqueantes (Assíncronas):** Uma chamada não bloqueante retorna imediatamente, independentemente de a operação ter sido concluída ou não. Ela pode retornar um código de erro indicando que a operação não pôde ser realizada naquele momento, ou pode iniciar a operação e notificar o processo posteriormente quando ela for concluída.
+
+### 13. Qual a diferença entre processo pesado (process) e thread (processo leve)?
+* **Processo (Pesado):** Um processo tem seu próprio espaço de endereçamento de memória, seus próprios descritores de arquivos, e é completamente isolado de outros processos pelo sistema operacional. A criação de um processo e a troca de contexto entre processos são operações custosas.
+* **Thread (Processo Leve):** Uma thread é uma unidade de execução dentro de um processo. Múltiplas threads dentro do mesmo processo compartilham o mesmo espaço de endereçamento de memória, os mesmos arquivos abertos e outros recursos. A criação de threads e a troca de contexto entre elas são muito mais rápidas e leves do que para processos.
+
+Em resumo, threads são uma forma de obter concorrência dentro de um único processo.
+
+### 14. Por que sistemas operacionais multiprogramados precisam de troca de contexto (context switch)?
+A troca de contexto é o mecanismo que permite a um sistema operacional multiprogramado alternar a CPU de um processo para outro. É essencial porque:
+* **Permite a Concorrência:** Cria a ilusão de que múltiplos processos estão sendo executados simultaneamente, mesmo em um sistema com uma única CPU.
+* **Compartilhamento de CPU:** Garante que a CPU seja compartilhada de forma justa entre todos os processos prontos para executar, evitando que um único processo monopolize o sistema.
+* **Responsividade:** Permite que o sistema continue responsivo ao usuário, mesmo que um processo esteja executando uma tarefa longa ou esperando por uma operação de E/S.
+
+O processo envolve salvar o estado do processo atual (seu contexto, armazenado no PCB) e carregar o estado do próximo processo a ser executado.
+
+### 15. Cite vantagens e desvantagens da comunicação via memória compartilhada.
+**Vantagens:**
+* **Alta Performance:** É o método de IPC mais rápido, pois, uma vez estabelecida, a comunicação ocorre na velocidade de acesso à memória, sem a necessidade de chamadas de sistema para cada troca de dados.
+* **Flexibilidade:** Permite a troca de grandes volumes de dados complexos de forma eficiente.
+
+**Desvantagens:**
+* **Complexidade de Sincronização:** Os programadores são responsáveis por implementar mecanismos de sincronização (como semáforos ou mutexes) para proteger a área de memória compartilhada contra acessos simultâneos, o que pode ser complexo e propenso a erros (condições de corrida, deadlocks).
+* **Segurança e Proteção:** É menos segura, pois um erro em um processo pode corromper os dados na memória compartilhada, afetando todos os outros processos que a utilizam.
+* **Escalabilidade:** Geralmente, não é adequada para comunicação entre computadores diferentes em uma rede (sistemas distribuídos).
